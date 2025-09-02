@@ -1,0 +1,773 @@
+openapi: 3.0.0
+info:
+  title: Intelligent To-Do App API
+  version: 1.0.0
+  description: RESTful API for task management with intelligent breakdown
+  contact:
+    name: API Support
+    email: support@simple-todo.app
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: https://your-app.vercel.app/api
+    description: Production API via Vercel Functions
+  - url: http://localhost:5173/api
+    description: Local development server
+
+paths:
+  /tasks:
+    get:
+      summary: Get user tasks
+      description: Retrieve a list of tasks for the authenticated user with optional
+        filtering
+      tags:
+        - Tasks
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: context
+          in: query
+          description: Filter tasks by context
+          schema:
+            type: string
+            enum:
+              - work
+              - personal
+        - name: status
+          in: query
+          description: Filter tasks by status
+          schema:
+            type: string
+            enum:
+              - pending
+              - in_progress
+              - completed
+        - name: parent_id
+          in: query
+          description: Get subtasks for a specific parent task
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: List of tasks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Task'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      summary: Create new task with intelligent breakdown
+      description: Create a task from natural language input and generate intelligent
+        breakdown
+      tags:
+        - Tasks
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - input
+              properties:
+                input:
+                  type: string
+                  description: Natural language task input
+                  example: Plan birthday party for next Saturday
+                  minLength: 1
+                  maxLength: 500
+                context:
+                  type: string
+                  enum:
+                    - work
+                    - personal
+                  default: personal
+                  description: Task context for intelligent categorization
+      responses:
+        '201':
+          description: Created task with breakdown
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  parent_task:
+                    $ref: '#/components/schemas/Task'
+                  subtasks:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Task'
+                  breakdown_metadata:
+                    type: object
+                    properties:
+                      template_used:
+                        type: string
+                      confidence_score:
+                        type: number
+                        format: float
+                        minimum: 0
+                        maximum: 1
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /tasks/{id}:
+    get:
+      summary: Get specific task
+      description: Retrieve a single task by ID with its subtasks
+      tags:
+        - Tasks
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Task UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Task details
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Task'
+                  - type: object
+                    properties:
+                      subtasks:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Task'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    put:
+      summary: Update task
+      description: Update task properties and trigger re-breakdown if needed
+      tags:
+        - Tasks
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Task UUID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskUpdate'
+      responses:
+        '200':
+          description: Updated task
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    delete:
+      summary: Delete task
+      description: Delete task and all its subtasks
+      tags:
+        - Tasks
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Task UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Task deleted successfully
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /tasks/{id}/complete:
+    post:
+      summary: Mark task as completed
+      description: Mark a task as completed and update parent task progress
+      tags:
+        - Tasks
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Task UUID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                actual_effort:
+                  type: integer
+                  description: Actual time spent in minutes
+                  minimum: 0
+      responses:
+        '200':
+          description: Task marked as completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /auth/login:
+    post:
+      summary: User authentication
+      description: Authenticate user with email and password
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: user@example.com
+                password:
+                  type: string
+                  format: password
+                  minLength: 8
+                  example: securepassword123
+      responses:
+        '200':
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    description: JWT access token
+                  refresh_token:
+                    type: string
+                    description: JWT refresh token
+                  user:
+                    $ref: '#/components/schemas/User'
+                  expires_in:
+                    type: integer
+                    description: Token expiration time in seconds
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /auth/register:
+    post:
+      summary: User registration
+      description: Register a new user account
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+                - name
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: newuser@example.com
+                password:
+                  type: string
+                  format: password
+                  minLength: 8
+                  example: securepassword123
+                name:
+                  type: string
+                  minLength: 2
+                  maxLength: 100
+                  example: John Doe
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+                  message:
+                    type: string
+                    example: Registration successful. Please check your email to verify your
+                      account.
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '409':
+          description: Email already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /auth/refresh:
+    post:
+      summary: Refresh access token
+      description: Generate new access token using refresh token
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - refresh_token
+              properties:
+                refresh_token:
+                  type: string
+                  description: Valid refresh token
+      responses:
+        '200':
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    description: New JWT access token
+                  expires_in:
+                    type: integer
+                    description: Token expiration time in seconds
+        '401':
+          description: Invalid refresh token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /templates:
+    get:
+      summary: Get task breakdown templates
+      description: Retrieve available task breakdown templates for debugging/admin
+      tags:
+        - Templates
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of templates
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TaskTemplate'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique user identifier
+        email:
+          type: string
+          format: email
+          description: User email address
+        name:
+          type: string
+          description: User display name
+        created_at:
+          type: string
+          format: date-time
+          description: Account creation timestamp
+        preferences:
+          $ref: '#/components/schemas/UserPreferences'
+      required:
+        - id
+        - email
+        - created_at
+
+    UserPreferences:
+      type: object
+      properties:
+        default_context:
+          type: string
+          enum:
+            - work
+            - personal
+          description: Default context for new tasks
+        breakdown_style:
+          type: string
+          enum:
+            - detailed
+            - minimal
+          description: Preferred level of task breakdown detail
+        interface_mode:
+          type: string
+          enum:
+            - professional
+            - casual
+          description: UI tone and styling preference
+
+    Task:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique task identifier
+        user_id:
+          type: string
+          format: uuid
+          description: Owner user ID
+        parent_task_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Parent task ID for subtasks
+        title:
+          type: string
+          description: Task title
+          maxLength: 500
+        description:
+          type: string
+          nullable: true
+          description: Detailed task description
+        due_date:
+          type: string
+          format: date-time
+          nullable: true
+          description: Task deadline
+        priority:
+          type: integer
+          description: Task priority (-1=low, 0=normal, 1=high, 2=urgent)
+          minimum: -1
+          maximum: 2
+        context:
+          type: string
+          enum:
+            - work
+            - personal
+          description: Task context
+        task_type:
+          type: string
+          description: Classified task type for template matching
+        status:
+          type: string
+          enum:
+            - pending
+            - in_progress
+            - completed
+          description: Current task status
+        breakdown_source:
+          type: string
+          enum:
+            - manual
+            - rule
+            - ai
+          description: How the task was created/broken down
+        task_level:
+          type: integer
+          description: Hierarchy level (0=parent, 1=subtask, etc.)
+          minimum: 0
+        sequence_order:
+          type: integer
+          description: Order within the same level
+          minimum: 0
+        estimated_effort:
+          type: integer
+          nullable: true
+          description: Estimated time in minutes
+          minimum: 1
+        actual_effort:
+          type: integer
+          nullable: true
+          description: Actual time spent in minutes
+          minimum: 1
+        created_at:
+          type: string
+          format: date-time
+          description: Task creation timestamp
+        updated_at:
+          type: string
+          format: date-time
+          description: Last modification timestamp
+      required:
+        - id
+        - user_id
+        - title
+        - priority
+        - context
+        - task_type
+        - status
+        - breakdown_source
+        - task_level
+        - sequence_order
+        - created_at
+        - updated_at
+
+    TaskUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 500
+        description:
+          type: string
+          nullable: true
+        due_date:
+          type: string
+          format: date-time
+          nullable: true
+        priority:
+          type: integer
+          minimum: -1
+          maximum: 2
+        status:
+          type: string
+          enum:
+            - pending
+            - in_progress
+            - completed
+        estimated_effort:
+          type: integer
+          nullable: true
+          minimum: 1
+
+    TaskTemplate:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          description: Template name
+        task_pattern:
+          type: string
+          description: Keywords/phrases that trigger this template
+        template_data:
+          type: object
+          description: Structured breakdown logic
+          properties:
+            subtasks:
+              type: array
+              items:
+                $ref: '#/components/schemas/SubtaskTemplate'
+            variables:
+              type: array
+              items:
+                type: string
+        usage_count:
+          type: integer
+          description: Number of times template was used
+        success_rate:
+          type: number
+          format: float
+          description: Completion rate for tasks using this template
+          minimum: 0
+          maximum: 1
+        created_at:
+          type: string
+          format: date-time
+
+    SubtaskTemplate:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        estimated_effort:
+          type: integer
+          nullable: true
+          minimum: 1
+        prerequisites:
+          type: array
+          items:
+            type: string
+        sequence_order:
+          type: integer
+          minimum: 0
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Error code for programmatic handling
+            message:
+              type: string
+              description: Human-readable error message
+            details:
+              type: object
+              description: Additional error context
+            timestamp:
+              type: string
+              format: date-time
+              description: Error occurrence time
+            requestId:
+              type: string
+              description: Request identifier for debugging
+          required:
+            - code
+            - message
+            - timestamp
+
+  responses:
+    BadRequestError:
+      description: Bad request - invalid input
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            validation_error:
+              value:
+                error:
+                  code: VALIDATION_ERROR
+                  message: Input validation failed
+                  details:
+                    field: email
+                    issue: Invalid email format
+                  timestamp: '2024-01-01T12:00:00Z'
+                  requestId: req_123456
+
+    UnauthorizedError:
+      description: Unauthorized - invalid or missing authentication
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            invalid_token:
+              value:
+                error:
+                  code: INVALID_TOKEN
+                  message: Authentication token is invalid or expired
+                  timestamp: '2024-01-01T12:00:00Z'
+                  requestId: req_123456
+
+    NotFoundError:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            task_not_found:
+              value:
+                error:
+                  code: TASK_NOT_FOUND
+                  message: Task with specified ID does not exist
+                  timestamp: '2024-01-01T12:00:00Z'
+                  requestId: req_123456
+
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            server_error:
+              value:
+                error:
+                  code: INTERNAL_ERROR
+                  message: An unexpected error occurred
+                  timestamp: '2024-01-01T12:00:00Z'
+                  requestId: req_123456
+
+tags:
+  - name: Tasks
+    description: Task management operations
+  - name: Authentication
+    description: User authentication and session management
+  - name: Templates
+    description: Task breakdown templates (admin/debugging)

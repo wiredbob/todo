@@ -1,0 +1,20 @@
+{
+  "name": "@simple-todo/api",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "node dev-server.js",
+    "build": "tsc",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.33.0",
+    "@simple-todo/shared": "*",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@vercel/node": "^3.0.0",
+    "typescript": "^5.0.0",
+    "vercel": "^32.0.0"
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "name": "simple-todo",
+  "version": "1.0.0",
+  "description": "Simple hierarchical todo application",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:api\" \"npm run dev:web\"",
+    "dev:web": "npm run dev --workspace=@simple-todo/web",
+    "dev:api": "npm run dev --workspace=@simple-todo/api",
+    "build": "npm run build --workspace=@simple-todo/shared && npm run build --workspace=@simple-todo/web",
+    "build:shared": "npm run build --workspace=@simple-todo/shared",
+    "test": "npm run test --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "type-check": "npm run type-check --workspaces --if-present"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "concurrently": "^8.2.2",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}
