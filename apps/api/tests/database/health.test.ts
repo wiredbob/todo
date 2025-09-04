@@ -24,13 +24,13 @@ const mockResponse = () => {
     status: vi.fn().mockReturnThis(),
     json: vi.fn().mockReturnThis(),
   };
-  return res as any;
+  return res as Parameters<typeof databaseHealthHandler>[1];
 };
 
 // Mock VercelRequest
 const mockRequest = (method = 'GET') => ({
   method,
-} as any);
+} as Parameters<typeof databaseHealthHandler>[0]);
 
 describe('Database Health Endpoint', () => {
   beforeEach(() => {

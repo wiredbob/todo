@@ -51,7 +51,7 @@ describe('Health Endpoint', () => {
 
     await healthHandler(req, res);
 
-    const call = (res.json as any).mock.calls[0][0];
+    const call = (res.json as { mock: { calls: unknown[][] } }).mock.calls[0][0];
     const timestamp = call.data.timestamp;
     
     // Check if timestamp is a valid ISO string
@@ -64,7 +64,7 @@ describe('Health Endpoint', () => {
 
     await healthHandler(req, res);
 
-    const call = (res.json as any).mock.calls[0][0];
+    const call = (res.json as { mock: { calls: unknown[][] } }).mock.calls[0][0];
     const data = call.data;
 
     expect(data).toHaveProperty('message');
