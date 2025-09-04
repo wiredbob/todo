@@ -4,6 +4,8 @@
   "scripts": {
     "dev": "node dev-server.js",
     "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "type-check": "tsc --noEmit",
     "lint": "eslint . --ext ts --max-warnings 0"
   },
@@ -19,6 +21,7 @@
     "@vercel/node": "^3.0.0",
     "eslint": "^8.57.1",
     "typescript": "^5.0.0",
-    "vercel": "^32.0.0"
+    "vercel": "^32.0.0",
+    "vitest": "^1.0.0"
   }
 }
