@@ -1,0 +1,20 @@
+-- Basic test data for Simple Todo application  
+-- Story 1.1a: Development Database & Test Data (Simplified)
+-- 
+-- NOTE: This SQL file is for reference only.
+-- Use the JavaScript seed script instead: npm run db:seed
+--
+-- The JavaScript script properly creates auth users and lets Supabase
+-- generate UUIDs to avoid conflicts with existing data.
+--
+-- This creates:
+-- - 2 test users via Supabase auth (with proper auth.users records)  
+-- - 7 flat tasks (no hierarchies - that's for follow-up story)
+-- - Coverage of all task statuses: pending, in_progress, completed, cancelled
+-- - Mix of work/personal contexts and priority levels (0-3)
+--
+-- Task Distribution:
+-- User 1: 3 tasks (groceries, report, dentist)
+-- User 2: 4 tasks (meeting, code review, gym, bills)
+--
+-- Run with: npm run db:seed

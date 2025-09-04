@@ -4,16 +4,20 @@
   "scripts": {
     "dev": "node dev-server.js",
     "build": "tsc",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "lint": "eslint . --ext ts --max-warnings 0"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.33.0",
     "@simple-todo/shared": "*",
+    "@supabase/supabase-js": "^2.33.0",
     "zod": "^3.22.0"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0",
     "@vercel/node": "^3.0.0",
+    "eslint": "^8.57.1",
     "typescript": "^5.0.0",
     "vercel": "^32.0.0"
   }

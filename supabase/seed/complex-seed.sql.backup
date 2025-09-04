@@ -1,0 +1,119 @@
+-- Comprehensive test data for Simple Todo application
+-- Story 1.1a: Development Database & Test Data
+
+-- Note: In a real environment, users would be created through Supabase Auth
+-- This is test data that assumes users exist in auth.users
+-- For development, you'll need to create these users through the Supabase dashboard or auth API
+
+-- Test user data (these IDs should match actual auth.users records)
+-- User 1: Empty User (new user experience)
+INSERT INTO public.users (id, email, name) VALUES 
+('00000000-0000-0000-0000-000000000001', 'empty@example.com', 'Empty User')
+ON CONFLICT (id) DO UPDATE SET 
+  email = EXCLUDED.email,
+  name = EXCLUDED.name,
+  updated_at = NOW();
+
+-- User 2: Light User (basic functionality testing)
+INSERT INTO public.users (id, email, name) VALUES 
+('00000000-0000-0000-0000-000000000002', 'light@example.com', 'Light User')
+ON CONFLICT (id) DO UPDATE SET 
+  email = EXCLUDED.email,
+  name = EXCLUDED.name,
+  updated_at = NOW();
+
+-- User 3: Power User (performance and complex hierarchy testing)
+INSERT INTO public.users (id, email, name) VALUES 
+('00000000-0000-0000-0000-000000000003', 'power@example.com', 'Power User')
+ON CONFLICT (id) DO UPDATE SET 
+  email = EXCLUDED.email,
+  name = EXCLUDED.name,
+  updated_at = NOW();
+
+-- User 4: Edge Case User (special characters and edge cases)
+INSERT INTO public.users (id, email, name) VALUES 
+('00000000-0000-0000-0000-000000000004', 'edge@example.com', 'Edge Case User "Special" & Tester')
+ON CONFLICT (id) DO UPDATE SET 
+  email = EXCLUDED.email,
+  name = EXCLUDED.name,
+  updated_at = NOW();
+
+-- User 5: Multi-Context User (work/personal context testing)
+INSERT INTO public.users (id, email, name) VALUES 
+('00000000-0000-0000-0000-000000000005', 'multi@example.com', 'Multi Context User')
+ON CONFLICT (id) DO UPDATE SET 
+  email = EXCLUDED.email,
+  name = EXCLUDED.name,
+  updated_at = NOW();
+
+-- Clear existing tasks to prevent conflicts
+DELETE FROM public.tasks WHERE user_id IN (
+  '00000000-0000-0000-0000-000000000001',
+  '00000000-0000-0000-0000-000000000002', 
+  '00000000-0000-0000-0000-000000000003',
+  '00000000-0000-0000-0000-000000000004',
+  '00000000-0000-0000-0000-000000000005'
+);
+
+-- User 1: Empty User - no tasks (onboarding flow testing)
+-- No tasks for this user
+
+-- User 2: Light User - 5 simple tasks (basic functionality)
+INSERT INTO public.tasks (id, user_id, title, description, status, context, priority) VALUES 
+('10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000002', 'Buy groceries', 'Get milk, bread, and eggs from the store', 'pending', 'personal', 1),
+('10000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000002', 'Finish project report', 'Complete the quarterly analysis report', 'in_progress', 'work', 2),
+('10000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000002', 'Call dentist', 'Schedule routine cleaning appointment', 'pending', 'personal', 0),
+('10000000-0000-0000-0000-000000000004', '00000000-0000-0000-0000-000000000002', 'Review team proposals', 'Go through the three new feature proposals', 'completed', 'work', 1),
+('10000000-0000-0000-0000-000000000005', '00000000-0000-0000-0000-000000000002', 'Plan weekend trip', 'Research destinations and book accommodation', 'pending', 'personal', 0);
+
+-- User 3: Power User - 20+ tasks with hierarchies (performance testing)
+-- Parent tasks
+INSERT INTO public.tasks (id, user_id, title, description, status, context, priority, task_level) VALUES 
+('20000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000003', 'Launch new product', 'Complete product launch for Q4', 'in_progress', 'work', 3, 0),
+('20000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000003', 'Home renovation', 'Kitchen and bathroom upgrades', 'pending', 'personal', 2, 0),
+('20000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000003', 'Health and fitness goals', 'Q4 fitness and wellness plan', 'in_progress', 'personal', 1, 0);
+
+-- Subtasks for "Launch new product"
+INSERT INTO public.tasks (id, user_id, parent_task_id, title, description, status, context, priority, task_level, sequence_order, estimated_effort) VALUES 
+('20000000-0000-0000-0000-000000000011', '00000000-0000-0000-0000-000000000003', '20000000-0000-0000-0000-000000000001', 'Finalize product specifications', 'Complete technical and functional specs', 'completed', 'work', 3, 1, 1, 480),
+('20000000-0000-0000-0000-000000000012', '00000000-0000-0000-0000-000000000003', '20000000-0000-0000-0000-000000000001', 'Design UI/UX mockups', 'Create wireframes and visual designs', 'completed', 'work', 3, 1, 2, 720),
+('20000000-0000-0000-0000-000000000013', '00000000-0000-0000-0000-000000000003', '20000000-0000-0000-0000-000000000001', 'Develop core features', 'Implement main application functionality', 'in_progress', 'work', 3, 1, 3, 2400),
+('20000000-0000-0000-0000-000000000014', '00000000-0000-0000-0000-000000000003', '20000000-0000-0000-0000-000000000001', 'Testing and QA', 'Comprehensive testing phase', 'pending', 'work', 3, 1, 4, 960),
+('20000000-0000-0000-0000-000000000015', '00000000-0000-0000-0000-000000000003', '20000000-0000-0000-0000-000000000001', 'Marketing materials', 'Create launch campaign and materials', 'pending', 'work', 2, 1, 5, 360);
+
+-- Sub-subtasks for "Develop core features"
+INSERT INTO public.tasks (id, user_id, parent_task_id, title, description, status, context, priority, task_level, sequence_order, estimated_effort) VALUES 
+('20000000-0000-0000-0000-000000000131', '00000000-0000-0000-0000-000000000003', '20000000-0000-0000-0000-000000000013', 'Set up authentication system', 'Implement user login and registration', 'completed', 'work', 3, 2, 1, 480),
+('20000000-0000-0000-0000-000000000132', '00000000-0000-0000-0000-000000000003', '20000000-0000-0000-0000-000000000013', 'Build task management UI', 'Create task creation and editing interface', 'in_progress', 'work', 3, 2, 2, 600),
+('20000000-0000-0000-0000-000000000133', '00000000-0000-0000-0000-000000000003', '20000000-0000-0000-0000-000000000013', 'Implement data persistence', 'Set up database and API endpoints', 'pending', 'work', 3, 2, 3, 720);
+
+-- More standalone tasks for Power User
+INSERT INTO public.tasks (id, user_id, title, description, status, context, priority, due_date) VALUES 
+('20000000-0000-0000-0000-000000000004', '00000000-0000-0000-0000-000000000003', 'Team meeting prep', 'Prepare agenda and materials for Monday standup', 'pending', 'work', 2, NOW() + INTERVAL '2 days'),
+('20000000-0000-0000-0000-000000000005', '00000000-0000-0000-0000-000000000003', 'Code review for Sarah', 'Review pull request #234 for authentication module', 'pending', 'work', 1, NOW() + INTERVAL '1 day'),
+('20000000-0000-0000-0000-000000000006', '00000000-0000-0000-0000-000000000003', 'Update documentation', 'Refresh API documentation with latest changes', 'pending', 'work', 1, NULL),
+('20000000-0000-0000-0000-000000000007', '00000000-0000-0000-0000-000000000003', 'Grocery shopping', 'Weekly grocery run - check meal plan', 'pending', 'personal', 0, NOW() + INTERVAL '3 days'),
+('20000000-0000-0000-0000-000000000008', '00000000-0000-0000-0000-000000000003', 'Car maintenance', 'Schedule oil change and tire rotation', 'pending', 'personal', 1, NOW() + INTERVAL '1 week');
+
+-- User 4: Edge Case User - tasks with special characters and edge cases
+INSERT INTO public.tasks (id, user_id, title, description, status, context, priority) VALUES 
+('30000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000004', 'Task with "quotes" & special chars', 'Description with émojis 🚀 and spéciàl characters: @#$%^&*()', 'pending', 'personal', 0),
+('30000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000004', 'Very long task title that exceeds normal length expectations and tests the UI components ability to handle lengthy text gracefully without breaking the layout or causing display issues', 'This is a very long description that contains multiple paragraphs.\n\nSecond paragraph with newlines and special formatting.\n\n- Bullet point with special chars: áéíóú\n- Another bullet with numbers: 123456789\n- Unicode symbols: ∑∏∆∇∂∞∝', 'in_progress', 'work', 3),
+('30000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000004', '', 'Task with empty title (edge case testing)', 'pending', 'personal', 0),
+('30000000-0000-0000-0000-000000000004', '00000000-0000-0000-0000-000000000004', 'SQL injection attempt: ''; DROP TABLE tasks; --', 'Testing input validation and security', 'cancelled', 'work', 0);
+
+-- User 5: Multi-Context User - mix of work and personal tasks
+INSERT INTO public.tasks (id, user_id, title, description, status, context, priority, due_date, task_type) VALUES 
+-- Work tasks
+('40000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000005', 'Client presentation', 'Prepare slides for quarterly business review', 'in_progress', 'work', 3, NOW() + INTERVAL '5 days', 'meeting'),
+('40000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000005', 'Budget analysis', 'Review Q3 expenses and prepare Q4 forecast', 'pending', 'work', 2, NOW() + INTERVAL '1 week', 'analysis'),
+('40000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000005', 'Team retrospective', 'Facilitate monthly team retrospective meeting', 'completed', 'work', 2, NOW() - INTERVAL '2 days', 'meeting'),
+
+-- Personal tasks
+('40000000-0000-0000-0000-000000000004', '00000000-0000-0000-0000-000000000005', 'Book vacation', 'Plan and book summer vacation for family', 'pending', 'personal', 2, NOW() + INTERVAL '2 weeks', 'planning'),
+('40000000-0000-0000-0000-000000000005', '00000000-0000-0000-0000-000000000005', 'Doctor appointment', 'Annual physical checkup', 'pending', 'personal', 1, NOW() + INTERVAL '10 days', 'health'),
+('40000000-0000-0000-0000-000000000006', '00000000-0000-0000-0000-000000000005', 'Birthday party planning', 'Organize surprise party for spouse', 'in_progress', 'personal', 3, NOW() + INTERVAL '3 weeks', 'event'),
+
+-- Mixed context tasks
+('40000000-0000-0000-0000-000000000007', '00000000-0000-0000-0000-000000000005', 'Networking event', 'Attend industry conference downtown', 'pending', 'work', 1, NOW() + INTERVAL '12 days', 'networking'),
+('40000000-0000-0000-0000-000000000008', '00000000-0000-0000-0000-000000000005', 'Home office setup', 'Upgrade desk and monitor for better WFH experience', 'pending', 'personal', 1, NULL, 'improvement');

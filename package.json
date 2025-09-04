@@ -13,14 +13,25 @@
     "dev:api": "npm run dev --workspace=@simple-todo/api",
     "build": "npm run build --workspace=@simple-todo/shared && npm run build --workspace=@simple-todo/web",
     "build:shared": "npm run build --workspace=@simple-todo/shared",
-    "test": "npm run test --workspaces --if-present",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui",
     "lint": "npm run lint --workspaces --if-present",
-    "type-check": "npm run type-check --workspaces --if-present"
+    "type-check": "npm run type-check --workspaces --if-present",
+    "db:reset": "tsx scripts/db-reset.ts",
+    "db:seed": "tsx scripts/seed-basic-data.ts",
+    "db:status": "tsx scripts/db-status.ts",
+    "db:setup": "npm run db:reset && npm run db:seed"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
+    "@vitest/ui": "^3.2.4",
     "concurrently": "^8.2.2",
-    "typescript": "^5.0.0"
+    "dotenv": "^17.2.2",
+    "supabase": "^2.39.2",
+    "tsx": "^4.20.5",
+    "typescript": "^5.0.0",
+    "vitest": "^3.2.4"
   },
   "engines": {
     "node": ">=18.0.0",
