@@ -7,7 +7,7 @@ const mockResponse = () => {
     status: vi.fn().mockReturnThis(),
     json: vi.fn().mockReturnThis(),
   };
-  return res as Parameters<typeof healthHandler>[1];
+  return res as unknown as Parameters<typeof healthHandler>[1];
 };
 
 // Mock VercelRequest
@@ -51,7 +51,7 @@ describe('Health Endpoint', () => {
 
     await healthHandler(req, res);
 
-    const call = res.json.mock.calls[0][0];
+    const call = (res.json as any).mock.calls[0][0];
     const timestamp = call.data.timestamp;
     
     // Check if timestamp is a valid ISO string
@@ -64,7 +64,7 @@ describe('Health Endpoint', () => {
 
     await healthHandler(req, res);
 
-    const call = res.json.mock.calls[0][0];
+    const call = (res.json as any).mock.calls[0][0];
     const data = call.data;
 
     expect(data).toHaveProperty('message');

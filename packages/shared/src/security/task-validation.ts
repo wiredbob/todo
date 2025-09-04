@@ -68,7 +68,7 @@ export async function validateParentTaskOwnership(
       };
     }
 
-    if (parentTask.user_id !== userId) {
+    if ((parentTask as any).user_id !== userId) {
       return { 
         valid: false, 
         error: 'Parent task belongs to different user' 
@@ -80,7 +80,7 @@ export async function validateParentTaskOwnership(
   } catch (error) {
     return { 
       valid: false, 
-      error: `Security validation error: ${error.message}` 
+      error: `Security validation error: ${(error as Error).message}` 
     };
   }
 }
@@ -105,7 +105,7 @@ export async function validateTaskCreation(
   const parentValidation = await validateParentTaskOwnership(
     context,
     taskInput.user_id,
-    taskInput.parent_task_id
+    taskInput.parent_task_id || null
   );
 
   if (!parentValidation.valid) {
@@ -149,13 +149,13 @@ export async function validateTaskUpdate(
       };
     }
 
-    const finalUserId = updates.user_id || currentTask.user_id;
+    const finalUserId = updates.user_id || (currentTask as any).user_id;
 
     // Validate parent task ownership with final user ID
     const parentValidation = await validateParentTaskOwnership(
       context,
       finalUserId,
-      updates.parent_task_id
+      updates.parent_task_id || null
     );
 
     if (!parentValidation.valid) {
@@ -181,7 +181,7 @@ export async function createTaskSecurely(
   }
 
   // Proceed with creation
-  const { data, error } = await context.supabase
+  const { data, error } = await (context.supabase as any)
     .from('tasks')
     .insert(taskInput)
     .select()
@@ -210,7 +210,7 @@ export async function updateTaskSecurely(
   }
 
   // Proceed with update
-  const { data, error } = await context.supabase
+  const { data, error } = await (context.supabase as any)
     .from('tasks')
     .update(updates)
     .eq('id', taskId)
