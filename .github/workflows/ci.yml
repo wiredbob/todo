@@ -66,7 +66,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: dist-files
-          path: dist/
+          path: |
+            dist/
+            packages/shared/dist/
           retention-days: 1
 
   deploy-preview:
@@ -101,7 +103,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: dist-files
-          path: dist/
+          path: ./
 
       - name: Deploy to Vercel (Production)
         uses: amondnet/vercel-action@v25
