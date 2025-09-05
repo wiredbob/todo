@@ -12,7 +12,13 @@ export default defineConfig({
       '**/cypress/**',
       '**/.{idea,git,cache,output,temp}/**',
       '**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build}.config.*',
-      'apps/web/tests/**' // Exclude web tests - they use their own config
+      'apps/web/tests/**', // Exclude web tests - they use their own config
+      // Skip database tests in CI environment
+      ...(process.env.CI === 'true' ? [
+        'tests/security-vulnerability.test.js',
+        'tests/security-validation.test.js', 
+        'tests/seed-data.test.js'
+      ] : [])
     ]
   }
 });

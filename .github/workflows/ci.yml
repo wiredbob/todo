@@ -47,6 +47,8 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: test-service-role-key
           VITE_SUPABASE_URL: http://localhost:54321
           VITE_SUPABASE_ANON_KEY: test-anon-key
+          # Skip database-dependent tests in CI
+          CI: true
 
       - name: Build frontend
         run: npm run build
