@@ -53,6 +53,15 @@ jobs:
       - name: Build frontend
         run: npm run build
 
+      - name: Debug build output
+        run: |
+          echo "=== Root directory ==="
+          ls -la ./
+          echo "=== Looking for dist directories ==="
+          find . -name "dist" -type d
+          echo "=== Contents of any dist directories ==="
+          find . -name "dist" -type d -exec ls -la {} \;
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
