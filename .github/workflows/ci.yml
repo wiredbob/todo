@@ -50,25 +50,20 @@ jobs:
           # Skip database-dependent tests in CI
           CI: true
 
-      - name: Build frontend
-        run: npm run build
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
 
-      - name: Debug build output
-        run: |
-          echo "=== Root directory ==="
-          ls -la ./
-          echo "=== Looking for dist directories ==="
-          find . -name "dist" -type d
-          echo "=== Contents of any dist directories ==="
-          find . -name "dist" -type d -exec ls -la {} \;
+      - name: Pull Vercel environment information
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build project artifacts
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: dist-files
-          path: |
-            dist/
-            packages/shared/dist/
+          name: vercel-output
+          path: .vercel/output/
           retention-days: 1
 
   deploy-preview:
@@ -102,8 +97,8 @@ jobs:
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
-          name: dist-files
-          path: ./
+          name: vercel-output
+          path: .vercel/output/
 
       - name: Deploy to Vercel (Production)
         uses: amondnet/vercel-action@v25
