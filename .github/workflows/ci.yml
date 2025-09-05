@@ -34,7 +34,9 @@ jobs:
         run: npm run type-check
 
       - name: Lint code
-        run: npm run lint
+        run: |
+          npm run lint --workspace=@simple-todo/api
+          npm run lint --workspace=@simple-todo/web
 
       - name: Run tests
         run: npm run test

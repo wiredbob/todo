@@ -24,7 +24,7 @@ const mockResponse = () => {
     status: vi.fn().mockReturnThis(),
     json: vi.fn().mockReturnThis(),
   };
-  return res as Parameters<typeof databaseHealthHandler>[1];
+  return res as unknown as Parameters<typeof databaseHealthHandler>[1];
 };
 
 // Mock VercelRequest
