@@ -58,13 +58,52 @@ jobs:
 
       - name: Copy API functions to expected location
         run: |
-          rsync -av --exclude='node_modules' --exclude='*.test.ts' --exclude='*.config.ts' --exclude='tests' apps/api/ api/
-          mkdir -p api/shared
-          cp -r packages/shared/dist/* api/shared/
-          # Replace workspace imports with relative imports in API files
-          find api -name "*.ts" -type f -exec sed -i.bak "s/@simple-todo\/shared/\.\/shared/g" {} \;
+          # Only copy the actual API endpoint files, not utilities or dev files
+          mkdir -p api/database
+          cp apps/api/health.ts api/
+          cp apps/api/database/health.ts api/database/
+          # Create inline shared types instead of importing
+          cat > api/shared-types.ts << 'EOF'
+          export interface ApiResponse<T = any> {
+            success: boolean;
+            data?: T;
+            error?: string;
+          }
+          EOF
+          # Create self-contained utils
+          cat > api/response.ts << 'EOF'
+          import { VercelResponse } from '@vercel/node'
+          
+          interface ApiResponse<T = any> {
+            success: boolean;
+            data?: T;
+            error?: string;
+          }
+          
+          export function sendSuccess<T>(res: VercelResponse, data: T, status = 200) {
+            const response: ApiResponse<T> = {
+              success: true,
+              data
+            }
+            return res.status(status).json(response)
+          }
+          
+          export function sendError(res: VercelResponse, message: string, status = 500) {
+            const response: ApiResponse = {
+              success: false,
+              error: message
+            }
+            return res.status(status).json(response)
+          }
+          EOF
+          # Create self-contained supabase client
+          cp apps/api/utils/supabase.ts api/supabase.ts
+          # Fix imports in API files
+          sed -i.bak 's|./utils/response|./response|g' api/health.ts
+          sed -i.bak 's|../utils/supabase|./supabase|g' api/database/health.ts  
+          sed -i.bak 's|../utils/response|./response|g' api/database/health.ts
           find api -name "*.bak" -delete
-          # Create a simplified package.json without workspace dependencies
+          # Create minimal package.json
           cat > api/package.json << 'EOF'
           {
             "name": "api",
@@ -74,12 +113,10 @@ jobs:
             }
           }
           EOF
-          echo "=== DEBUG: API structure ==="
-          find api -name "*.ts" | head -10
-          echo "=== DEBUG: API package.json ==="
-          cat api/package.json
-          echo "=== DEBUG: Sample API file ==="
-          head -5 api/health.ts
+          echo "=== DEBUG: Final API structure ==="
+          find api -name "*.ts"
+          echo "=== DEBUG: Health function imports ==="
+          head -3 api/health.ts
 
       - name: Build project artifacts
         run: |
