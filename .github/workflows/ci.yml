@@ -126,6 +126,22 @@ jobs:
           vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
           echo "=== DEBUG: Post-build .vercel/output structure ==="
           find .vercel/output -type f | head -10 || echo "No .vercel/output found"
+          echo "=== DEBUG: Creating missing .vc-config.json files ==="
+          # Create .vc-config.json for each function
+          find .vercel/output/functions -name "*.func" -type d | while read func_dir; do
+            if [ ! -f "$func_dir/.vc-config.json" ]; then
+              echo "Creating config for $func_dir"
+              cat > "$func_dir/.vc-config.json" << 'EOF'
+          {
+            "runtime": "nodejs18.x",
+            "handler": "index.js",
+            "launcherType": "Nodejs"
+          }
+          EOF
+            fi
+          done
+          echo "=== DEBUG: Verifying config files ==="
+          find .vercel/output/functions -name ".vc-config.json" | head -5
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
