@@ -62,11 +62,18 @@ jobs:
           mkdir -p api/shared
           cp -r packages/shared/dist/* api/shared/
           # Replace workspace imports with relative imports in API files
-          find api -name "*.ts" -exec sed -i "s/@simple-todo\/shared/.\/shared/g" {} \;
-          # Remove workspace dependency from package.json
-          if [ -f api/package.json ]; then
-            sed -i '/"@simple-todo\/shared"/d' api/package.json
-          fi
+          find api -name "*.ts" -type f -exec sed -i.bak "s/@simple-todo\/shared/\.\/shared/g" {} \;
+          find api -name "*.bak" -delete
+          # Create a simplified package.json without workspace dependencies
+          cat > api/package.json << 'EOF'
+          {
+            "name": "api",
+            "version": "1.0.0",
+            "dependencies": {
+              "@vercel/node": "^3.0.0"
+            }
+          }
+          EOF
 
       - name: Build project artifacts
         run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
