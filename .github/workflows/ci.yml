@@ -56,13 +56,16 @@ jobs:
       - name: Pull Vercel environment information
         run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
 
-      - name: Copy API functions to expected location
+      - name: Create self-contained API functions
         run: |
           # Create API directory structure
           mkdir -p api/database
-          # Create self-contained utils FIRST
-          cat > api/response.ts << 'EOF'
-          import { VercelResponse } from '@vercel/node'
+          # Read utility files content
+          response_content=$(cat apps/api/utils/response.ts)
+          supabase_content=$(cat apps/api/utils/supabase.ts)
+          # Create self-contained health.ts
+          cat > api/health.ts << 'EOF'
+          import { VercelRequest, VercelResponse } from '@vercel/node'
           
           interface ApiResponse<T = any> {
             success: boolean;
@@ -70,7 +73,7 @@ jobs:
             error?: string;
           }
           
-          export function sendSuccess<T>(res: VercelResponse, data: T, status = 200) {
+          function sendSuccess<T>(res: VercelResponse, data: T, status = 200) {
             const response: ApiResponse<T> = {
               success: true,
               data
@@ -78,35 +81,111 @@ jobs:
             return res.status(status).json(response)
           }
           
-          export function sendError(res: VercelResponse, message: string, status = 500) {
+          export default async function handler(
+            req: VercelRequest,
+            res: VercelResponse
+          ) {
+            if (req.method !== 'GET') {
+              return res.status(405).json({ error: 'Method not allowed' })
+            }
+          
+            try {
+              const healthData = {
+                message: 'Simple Todo API is running',
+                timestamp: new Date().toISOString(),
+                status: 'healthy'
+              }
+          
+              return sendSuccess(res, healthData)
+            } catch (error) {
+              return res.status(500).json({ error: 'Internal server error' })
+            }
+          }
+          EOF
+          # Create self-contained database/health.ts
+          cat > api/database/health.ts << 'EOF'
+          import { VercelRequest, VercelResponse } from '@vercel/node'
+          import { createClient } from '@supabase/supabase-js'
+          
+          const supabaseUrl = process.env.SUPABASE_URL!
+          const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+          const supabase = createClient(supabaseUrl, supabaseKey)
+          
+          interface ApiResponse<T = any> {
+            success: boolean;
+            data?: T;
+            error?: string;
+          }
+          
+          function sendSuccess<T>(res: VercelResponse, data: T, status = 200) {
+            const response: ApiResponse<T> = {
+              success: true,
+              data
+            }
+            return res.status(status).json(response)
+          }
+          
+          function sendError(res: VercelResponse, message: string, status = 500) {
             const response: ApiResponse = {
               success: false,
               error: message
             }
             return res.status(status).json(response)
           }
-          EOF
-          # Create self-contained supabase client
-          cp apps/api/utils/supabase.ts api/supabase.ts
-          # Copy API endpoint files and fix imports in one step
-          sed 's|./utils/response|./response|g' apps/api/health.ts > api/health.ts
-          sed -e 's|../utils/supabase|./supabase|g' -e 's|../utils/response|./response|g' apps/api/database/health.ts > api/database/health.ts
-          # Create minimal package.json
-          cat > api/package.json << 'EOF'
-          {
-            "name": "api",
-            "version": "1.0.0",
-            "dependencies": {
-              "@vercel/node": "^3.0.0"
+          
+          export default async function handler(
+            req: VercelRequest,
+            res: VercelResponse
+          ) {
+            if (req.method !== 'GET') {
+              return res.status(405).json({ error: 'Method not allowed' })
+            }
+          
+            try {
+              // Test database connectivity by counting users
+              const { error: userError } = await supabase
+                .from('users')
+                .select('id', { count: 'exact' })
+                .limit(1)
+          
+              if (userError) {
+                return sendError(res, `Database connection failed: ${userError.message}`, 503)
+              }
+          
+              // Test tasks table connectivity
+              const { error: taskError } = await supabase
+                .from('tasks')
+                .select('id', { count: 'exact' })
+                .limit(1)
+          
+              if (taskError) {
+                return sendError(res, `Tasks table error: ${taskError.message}`, 503)
+              }
+          
+              const healthData = {
+                message: 'Database connection healthy',
+                timestamp: new Date().toISOString(),
+                database: {
+                  connected: true,
+                  tables: {
+                    users: 'accessible',
+                    tasks: 'accessible'
+                  }
+                }
+              }
+          
+              return sendSuccess(res, healthData)
+            } catch (error) {
+              return sendError(res, 'Database health check failed', 500)
             }
           }
           EOF
           echo "=== DEBUG: Final API structure ==="
           find api -name "*.ts"
-          echo "=== DEBUG: Health function imports ==="
-          head -3 api/health.ts
-          echo "=== DEBUG: Database health function imports ==="
-          head -3 api/database/health.ts
+          echo "=== DEBUG: Health function content ==="
+          head -10 api/health.ts
+          echo "=== DEBUG: Database health function content ==="
+          head -15 api/database/health.ts
 
       - name: Build project artifacts
         run: |
