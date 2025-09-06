@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npm run build && mkdir -p api && cp -r apps/api/* api/",
+  "buildCommand": "npm run build && rsync -av --exclude='node_modules' --exclude='*.test.ts' --exclude='*.config.ts' --exclude='tests' apps/api/ api/",
   "outputDirectory": "dist",
   "installCommand": "npm ci"
 }
