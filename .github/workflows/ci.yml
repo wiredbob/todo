@@ -74,9 +74,21 @@ jobs:
             }
           }
           EOF
+          echo "=== DEBUG: API structure ==="
+          find api -name "*.ts" | head -10
+          echo "=== DEBUG: API package.json ==="
+          cat api/package.json
+          echo "=== DEBUG: Sample API file ==="
+          head -5 api/health.ts
 
       - name: Build project artifacts
-        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+        run: |
+          echo "=== DEBUG: Pre-build directory structure ==="
+          ls -la
+          echo "=== DEBUG: Running vercel build ==="
+          vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+          echo "=== DEBUG: Post-build .vercel/output structure ==="
+          find .vercel/output -type f | head -10 || echo "No .vercel/output found"
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
