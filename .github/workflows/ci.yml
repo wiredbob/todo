@@ -58,19 +58,9 @@ jobs:
 
       - name: Copy API functions to expected location
         run: |
-          # Only copy the actual API endpoint files, not utilities or dev files
+          # Create API directory structure
           mkdir -p api/database
-          cp apps/api/health.ts api/
-          cp apps/api/database/health.ts api/database/
-          # Create inline shared types instead of importing
-          cat > api/shared-types.ts << 'EOF'
-          export interface ApiResponse<T = any> {
-            success: boolean;
-            data?: T;
-            error?: string;
-          }
-          EOF
-          # Create self-contained utils
+          # Create self-contained utils FIRST
           cat > api/response.ts << 'EOF'
           import { VercelResponse } from '@vercel/node'
           
@@ -98,11 +88,9 @@ jobs:
           EOF
           # Create self-contained supabase client
           cp apps/api/utils/supabase.ts api/supabase.ts
-          # Fix imports in API files
-          sed -i.bak 's|./utils/response|./response|g' api/health.ts
-          sed -i.bak 's|../utils/supabase|./supabase|g' api/database/health.ts  
-          sed -i.bak 's|../utils/response|./response|g' api/database/health.ts
-          find api -name "*.bak" -delete
+          # Copy API endpoint files and fix imports in one step
+          sed 's|./utils/response|./response|g' apps/api/health.ts > api/health.ts
+          sed -e 's|../utils/supabase|./supabase|g' -e 's|../utils/response|./response|g' apps/api/database/health.ts > api/database/health.ts
           # Create minimal package.json
           cat > api/package.json << 'EOF'
           {
@@ -117,6 +105,8 @@ jobs:
           find api -name "*.ts"
           echo "=== DEBUG: Health function imports ==="
           head -3 api/health.ts
+          echo "=== DEBUG: Database health function imports ==="
+          head -3 api/database/health.ts
 
       - name: Build project artifacts
         run: |
