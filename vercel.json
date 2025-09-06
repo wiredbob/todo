@@ -1,35 +1,5 @@
 {
-  "buildCommand": "npm run build",
+  "buildCommand": "npm run build && mkdir -p api && cp -r apps/api/* api/",
   "outputDirectory": "dist",
-  "installCommand": "npm ci",
-  "functions": {
-    "apps/api/**/*.ts": {
-      "runtime": "@vercel/node@3.0.0"
-    }
-  },
-  "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "/apps/api/$1"
-    }
-  ],
-  "headers": [
-    {
-      "source": "/api/(.*)",
-      "headers": [
-        {
-          "key": "Access-Control-Allow-Origin",
-          "value": "*"
-        },
-        {
-          "key": "Access-Control-Allow-Methods",
-          "value": "GET, POST, PUT, DELETE, OPTIONS"
-        },
-        {
-          "key": "Access-Control-Allow-Headers",
-          "value": "Content-Type, Authorization"
-        }
-      ]
-    }
-  ]
+  "installCommand": "npm ci"
 }
