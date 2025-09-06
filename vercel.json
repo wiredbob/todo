@@ -1,5 +1,10 @@
 {
   "buildCommand": "npm run build",
-  "outputDirectory": "dist",
-  "installCommand": "npm ci"
+  "outputDirectory": "apps/web/dist",
+  "installCommand": "npm ci",
+  "functions": {
+    "api/**/*.ts": {
+      "runtime": "@vercel/node@3.0.0"
+    }
+  }
 }

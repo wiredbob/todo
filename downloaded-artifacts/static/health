@@ -1,0 +1,9 @@
+{
+  "message": "Simple Todo Frontend is running",
+  "timestamp": "2025-09-04T00:00:00.000Z",
+  "status": "healthy",
+  "buildInfo": {
+    "version": "1.0.0",
+    "environment": "production"
+  }
+}
