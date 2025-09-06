@@ -116,6 +116,9 @@ jobs:
           vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
           echo "=== DEBUG: Post-build .vercel/output structure ==="
           find .vercel/output -type f | head -10 || echo "No .vercel/output found"
+
+      - name: Add missing function configurations
+        run: |
           echo "=== DEBUG: Creating missing .vc-config.json files ==="
           # Create .vc-config.json for each function
           find .vercel/output/functions -name "*.func" -type d | while read func_dir; do
@@ -132,6 +135,8 @@ jobs:
           done
           echo "=== DEBUG: Verifying config files ==="
           find .vercel/output/functions -name ".vc-config.json" | head -5
+          echo "=== DEBUG: Final .vercel/output structure ==="
+          find .vercel/output -name "*.func" -exec ls -la {}/.vc-config.json \;
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
