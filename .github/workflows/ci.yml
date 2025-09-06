@@ -57,7 +57,16 @@ jobs:
         run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Copy API functions to expected location
-        run: rsync -av --exclude='node_modules' --exclude='*.test.ts' --exclude='*.config.ts' --exclude='tests' apps/api/ api/
+        run: |
+          rsync -av --exclude='node_modules' --exclude='*.test.ts' --exclude='*.config.ts' --exclude='tests' apps/api/ api/
+          mkdir -p api/shared
+          cp -r packages/shared/dist/* api/shared/
+          # Replace workspace imports with relative imports in API files
+          find api -name "*.ts" -exec sed -i "s/@simple-todo\/shared/.\/shared/g" {} \;
+          # Remove workspace dependency from package.json
+          if [ -f api/package.json ]; then
+            sed -i '/"@simple-todo\/shared"/d' api/package.json
+          fi
 
       - name: Build project artifacts
         run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
