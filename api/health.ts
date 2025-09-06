@@ -1,5 +1,5 @@
 import { VercelRequest, VercelResponse } from '@vercel/node'
-import { sendSuccess } from './utils/response'
+import { sendSuccess } from '../lib/utils/response'
 
 export default async function handler(
   req: VercelRequest,

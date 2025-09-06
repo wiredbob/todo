@@ -1,6 +1,6 @@
 import { VercelRequest, VercelResponse } from '@vercel/node'
-import { supabase } from '../utils/supabase'
-import { sendSuccess, sendError } from '../utils/response'
+import { supabase } from '../../lib/utils/supabase'
+import { sendSuccess, sendError } from '../../lib/utils/response'
 
 export default async function handler(
   req: VercelRequest,
