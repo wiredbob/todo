@@ -4,7 +4,7 @@
   "installCommand": "npm ci",
   "functions": {
     "api/**/*.ts": {
-      "runtime": "@vercel/node"
+      "runtime": "@vercel/node@5.3.17"
     }
   }
 }
