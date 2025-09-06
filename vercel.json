@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npm run build && rsync -av --exclude='node_modules' --exclude='*.test.ts' --exclude='*.config.ts' --exclude='tests' apps/api/ api/",
+  "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "installCommand": "npm ci"
 }

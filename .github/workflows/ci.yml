@@ -56,6 +56,9 @@ jobs:
       - name: Pull Vercel environment information
         run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
 
+      - name: Copy API functions to expected location
+        run: rsync -av --exclude='node_modules' --exclude='*.test.ts' --exclude='*.config.ts' --exclude='tests' apps/api/ api/
+
       - name: Build project artifacts
         run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
 
