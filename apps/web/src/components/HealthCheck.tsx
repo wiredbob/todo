@@ -24,7 +24,7 @@ interface DatabaseHealthData {
   };
 }
 
-export const HealthCheck: React.FC = () => {
+const HealthCheck: React.FC = () => {
   const [apiHealth, setApiHealth] = useState<HealthData | null>(null);
   const [dbHealth, setDbHealth] = useState<DatabaseHealthData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -128,3 +128,5 @@ export const HealthCheck: React.FC = () => {
     </div>
   );
 };
+
+export default HealthCheck;

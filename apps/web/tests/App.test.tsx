@@ -1,69 +1,53 @@
-import { render, screen, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
 import App from '../src/App';
 
-// Mock fetch
+// Mock fetch for health checks
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
 describe('App Component', () => {
   beforeEach(() => {
     mockFetch.mockReset();
+    // Default mock for health check to prevent errors
+    mockFetch.mockRejectedValue(new Error('Network error'));
   });
 
-  it('renders the main heading', () => {
-    mockFetch.mockRejectedValueOnce(new Error('Network error'));
-    
+  it('renders with routing structure', () => {
     render(<App />);
     
+    // Should show the navigation brand
     expect(screen.getByText('Simple Todo')).toBeInTheDocument();
-    expect(screen.getByText('Hello World! The core infrastructure is ready.')).toBeInTheDocument();
+    
+    // Should render the dashboard by default (redirect from /)
+    expect(screen.getByRole('heading', { name: /dashboard/i })).toBeInTheDocument();
+    expect(screen.getByText(/welcome to simple todo/i)).toBeInTheDocument();
   });
 
-  it('shows checking status initially', () => {
-    mockFetch.mockRejectedValueOnce(new Error('Network error'));
-    
+  it('renders navigation with login and dashboard links', () => {
     render(<App />);
     
-    expect(screen.getByText('API Status:')).toBeInTheDocument();
-    expect(screen.getByText('Checking...')).toBeInTheDocument();
+    // Should show navigation links
+    expect(screen.getByRole('link', { name: /🏠 dashboard/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /🔐 login/i })).toBeInTheDocument();
   });
 
-  it('displays API connected status on successful health check', async () => {
-    const mockResponse = { message: 'Simple Todo API is running' };
-    mockFetch.mockResolvedValueOnce({
-      json: () => Promise.resolve(mockResponse)
-    });
-    
+  it('renders health check component on dashboard', () => {
     render(<App />);
     
-    await waitFor(() => {
-      expect(screen.getByText('API Status:')).toBeInTheDocument();
-      expect(screen.getByText('Simple Todo API is running')).toBeInTheDocument();
-    });
+    // Health check should be rendered (checking state initially due to mock)
+    expect(screen.getByText(/checking system health/i)).toBeInTheDocument();
   });
 
-  it('displays API not available on failed health check', async () => {
-    mockFetch.mockRejectedValueOnce(new Error('Network error'));
-    
+  it('renders placeholder feature cards', () => {
     render(<App />);
     
-    await waitFor(() => {
-      expect(screen.getByText('API Status:')).toBeInTheDocument();
-      expect(screen.getByText('API not available')).toBeInTheDocument();
-    });
-  });
-
-  it('handles health check response without message', async () => {
-    mockFetch.mockResolvedValueOnce({
-      json: () => Promise.resolve({})
-    });
+    // Should show coming soon cards for features
+    expect(screen.getByText(/single task input/i)).toBeInTheDocument();
+    expect(screen.getByText(/task breakdown/i)).toBeInTheDocument();
     
-    render(<App />);
-    
-    await waitFor(() => {
-      expect(screen.getByText('API Status:')).toBeInTheDocument();
-      expect(screen.getByText('API connected')).toBeInTheDocument();
-    });
+    // Should show multiple "coming in story" badges (there are 6 feature cards)
+    const comingInElements = screen.getAllByText(/coming in story/i);
+    expect(comingInElements.length).toBeGreaterThan(0);
   });
-});
+})

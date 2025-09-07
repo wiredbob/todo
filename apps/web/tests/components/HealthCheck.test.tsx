@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { HealthCheck } from '../../src/components/HealthCheck';
+import HealthCheck from '../../src/components/HealthCheck';
 
 // Mock fetch
 const mockFetch = vi.fn();
