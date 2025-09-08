@@ -1,8 +1,6 @@
 const http = require('http');
-const path = require('path');
-const fs = require('fs');
 
-// Load environment variables at the top
+// Load environment variables
 require('dotenv').config({ path: '../../.env' });
 
 // Simple development server for testing API functions locally
@@ -18,74 +16,166 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // Route /api/health to health.ts
+  // Route /api/health
   if (req.url === '/api/health' && req.method === 'GET') {
-    try {
-      const healthData = {
-        message: 'Simple Todo API is running',
-        timestamp: new Date().toISOString(),
-        status: 'healthy'
-      };
-      
-      const response = {
-        success: true,
-        data: healthData
-      };
-      
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify(response));
-    } catch (error) {
-      res.writeHead(500, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'Internal server error' }));
-    }
+    const healthData = {
+      message: 'Simple Todo API is running',
+      timestamp: new Date().toISOString(),
+      status: 'healthy'
+    };
+    
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ success: true, data: healthData }));
     return;
   }
 
-  // Route /api/database/health to database health check
-  if (req.url === '/api/database/health' && req.method === 'GET') {
-    try {
-      // Import required modules
-      const { createClient } = require('@supabase/supabase-js');
-      
-      const supabaseUrl = process.env.SUPABASE_URL;
-      const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-      
-      if (!supabaseUrl || !supabaseServiceKey) {
-        res.writeHead(503, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ success: false, error: 'Database configuration missing' }));
-        return;
-      }
-      
-      const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-        auth: { autoRefreshToken: false, persistSession: false }
-      });
-      
-      // Test database connectivity
-      supabase.from('users').select('id', { count: 'exact' }).limit(1)
-        .then(({ data, error }) => {
-          if (error) {
-            res.writeHead(503, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ success: false, error: `Database error: ${error.message}` }));
-          } else {
-            const healthData = {
-              message: 'Database connection healthy',
-              timestamp: new Date().toISOString(),
-              database: { connected: true, tables: { users: 'accessible', tasks: 'accessible' } }
-            };
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ success: true, data: healthData }));
-          }
-        })
-        .catch(err => {
+  // Route /api/auth/register
+  if (req.url === '/api/auth/register' && req.method === 'POST') {
+    console.log('Handling registration request...');
+    
+    // Collect request body
+    let body = '';
+    req.on('data', chunk => {
+      body += chunk.toString();
+    });
+    
+    req.on('end', async () => {
+      try {
+        const requestData = JSON.parse(body);
+        console.log('Request data:', requestData);
+        
+        const { email, password, name } = requestData;
+        
+        // Basic validation
+        if (!email || !password) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ 
+            success: false, 
+            error: 'Email and password are required' 
+          }));
+          return;
+        }
+        
+        // Create Supabase client
+        const { createClient } = require('@supabase/supabase-js');
+        const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+        const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+
+        if (!supabaseUrl || !supabaseAnonKey) {
           res.writeHead(500, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ success: false, error: 'Database health check failed' }));
+          res.end(JSON.stringify({
+            success: false,
+            error: 'Server configuration error'
+          }));
+          return;
+        }
+
+        const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+        // Register user with Supabase Auth
+        const { data: authData, error: authError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              name: name || ''
+            }
+          }
         });
-      
-      return;
-    } catch (error) {
-      res.writeHead(500, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ success: false, error: 'Database health check failed' }));
-    }
+
+        if (authError) {
+          console.error('Supabase auth error:', authError);
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({
+            success: false,
+            error: authError.message
+          }));
+          return;
+        }
+
+        console.log('Registration successful');
+        res.writeHead(201, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          success: true,
+          data: {
+            user: authData.user,
+            message: 'Registration successful. Please check your email for confirmation.'
+          }
+        }));
+        
+      } catch (err) {
+        console.error('Request processing error:', err);
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, error: 'Invalid JSON' }));
+      }
+    });
+    
+    return;
+  }
+
+  // Route /api/auth/login
+  if (req.url === '/api/auth/login' && req.method === 'POST') {
+    console.log('Handling login request...');
+    
+    // Collect request body
+    let body = '';
+    req.on('data', chunk => {
+      body += chunk.toString();
+    });
+    
+    req.on('end', async () => {
+      try {
+        const requestData = JSON.parse(body);
+        const { email, password } = requestData;
+        
+        if (!email || !password) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ 
+            success: false, 
+            error: 'Email and password are required' 
+          }));
+          return;
+        }
+        
+        // Create Supabase client  
+        const { createClient } = require('@supabase/supabase-js');
+        const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+        const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+
+        const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+        // Login user
+        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+          email,
+          password
+        });
+
+        if (authError) {
+          res.writeHead(401, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({
+            success: false,
+            error: authError.message
+          }));
+          return;
+        }
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          success: true,
+          data: {
+            user: authData.user,
+            session: authData.session,
+            message: 'Login successful'
+          }
+        }));
+        
+      } catch (err) {
+        console.error('Login processing error:', err);
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, error: 'Invalid request' }));
+      }
+    });
+    
     return;
   }
 
