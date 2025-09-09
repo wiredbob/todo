@@ -26,8 +26,8 @@ describe('LoginPage', () => {
     expect(screen.getByText(/placeholder login/i)).toBeInTheDocument()
     expect(screen.getByText(/story 1.2 - authentication/i)).toBeInTheDocument()
     
-    // Check dashboard link
-    expect(screen.getByRole('link', { name: /go to dashboard/i })).toBeInTheDocument()
+    // Check register link
+    expect(screen.getByRole('link', { name: /create account/i })).toBeInTheDocument()
   })
 
   it('has proper accessibility attributes', () => {

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { loginSchema, type LoginRequest } from '@simple-todo/shared'
+import { useAuth } from '../../hooks/useAuth'
 
 interface FormErrors {
   email?: string
@@ -17,6 +18,7 @@ export default function LoginForm() {
   const navigate = useNavigate()
   const location = useLocation()
   const state = location.state as LocationState | null
+  const { signIn } = useAuth()
 
   const [formData, setFormData] = useState<LoginRequest>({
     email: '',
@@ -46,32 +48,15 @@ export default function LoginForm() {
         return
       }
 
-      // Submit login (AC 2: Secure login with JWT token generation)
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-        credentials: 'include' // Include cookies for httpOnly tokens (AC 4)
-      })
-
-      const result = await response.json()
+      // Submit login using AuthContext
+      const result = await signIn(formData.email, formData.password)
 
       if (result.success) {
         // Login successful - redirect to dashboard
         navigate('/dashboard', { replace: true })
       } else {
         // Handle login errors
-        if (result.details) {
-          const fieldErrors: FormErrors = {}
-          result.details.forEach((detail: { field: string; message: string }) => {
-            fieldErrors[detail.field as keyof FormErrors] = detail.message
-          })
-          setErrors(fieldErrors)
-        } else {
-          setErrors({ submit: result.error || 'Login failed' })
-        }
+        setErrors({ submit: result.error || 'Login failed' })
       }
     } catch (error) {
       setErrors({ submit: 'Network error. Please try again.' })

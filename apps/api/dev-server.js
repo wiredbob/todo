@@ -1,5 +1,8 @@
 const http = require('http');
 
+// Session max age in ms (7 days)
+const SESSION_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+
 // Load environment variables
 require('dotenv').config({ path: '../../.env' });
 
@@ -113,6 +116,274 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // Route /api/auth/session - get current session
+  if (req.url === '/api/auth/session' && req.method === 'GET') {
+    console.log('Handling session check request...');
+    console.log('Cookie header:', req.headers.cookie);
+    
+    try {
+      // Parse cookies
+      const cookies = {};
+      const cookieHeader = req.headers.cookie;
+      if (cookieHeader) {
+        cookieHeader.split(';').forEach(cookie => {
+          const [name, value] = cookie.trim().split('=');
+          cookies[name] = value;
+        });
+      }
+      console.log('Parsed cookies:', cookies);
+
+      // Check for session cookie
+      if (cookies.session) {
+        try {
+          const sessionData = JSON.parse(Buffer.from(cookies.session, 'base64').toString());
+          
+          // Check if session is still valid (not expired)
+          const maxAge = 7 * 24 * 60 * 60 * 1000; // 7 days in ms
+          if (Date.now() - sessionData.timestamp < maxAge) {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({
+              success: true,
+              data: {
+                user: sessionData.user,
+                session: sessionData.session
+              }
+            }));
+            return;
+          }
+        } catch (parseError) {
+          console.error('Session parsing error:', parseError);
+        }
+      }
+
+      // No valid session found
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        success: true,
+        data: {
+          user: null,
+          session: null
+        }
+      }));
+    } catch (error) {
+      console.error('Session check error:', error);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: 'Internal server error' }));
+    }
+    
+    return;
+  }
+
+  // Route /api/auth/refresh - refresh session
+  if (req.url === '/api/auth/refresh' && req.method === 'POST') {
+    console.log('Handling session refresh request...');
+    
+    try {
+      // For now, return no session (would refresh JWT in real implementation)
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        success: false,
+        error: 'No valid session to refresh'
+      }));
+    } catch (error) {
+      console.error('Session refresh error:', error);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: 'Internal server error' }));
+    }
+    
+    return;
+  }
+
+  // Route /api/auth/logout - logout user
+  if (req.url === '/api/auth/logout' && req.method === 'POST') {
+    console.log('Handling logout request...');
+    
+    try {
+      // Clear session cookie with same security settings
+      const isProduction = process.env.NODE_ENV === 'production'
+      const sameSitePolicy = isProduction ? 'Strict' : 'Lax'
+      const secureFlag = isProduction ? '; Secure' : ''
+      
+      res.writeHead(200, { 
+        'Content-Type': 'application/json',
+        'Set-Cookie': `session=; HttpOnly; Path=/; SameSite=${sameSitePolicy}${secureFlag}; Max-Age=0`
+      });
+      res.end(JSON.stringify({
+        success: true,
+        data: {
+          message: 'Logout successful'
+        }
+      }));
+    } catch (error) {
+      console.error('Logout error:', error);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: 'Internal server error' }));
+    }
+    
+    return;
+  }
+
+  // Route /api/profile/me - get current user profile
+  if (req.url === '/api/profile/me' && req.method === 'GET') {
+    console.log('Handling profile get request...');
+    
+    try {
+      // Parse cookies for session-based authentication
+      const cookies = {};
+      const cookieHeader = req.headers.cookie;
+      if (cookieHeader) {
+        cookieHeader.split(';').forEach(cookie => {
+          const [name, value] = cookie.trim().split('=');
+          cookies[name] = value;
+        });
+      }
+
+      // Check for valid session cookie
+      if (!cookies.session) {
+        res.writeHead(401, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          success: false,
+          error: 'Authentication required'
+        }));
+        return;
+      }
+
+      try {
+        const sessionData = JSON.parse(Buffer.from(cookies.session, 'base64').toString());
+        
+        // Check if session is still valid (not expired)
+        const maxAge = 7 * 24 * 60 * 60 * 1000; // 7 days in ms
+        if (Date.now() - sessionData.timestamp >= maxAge) {
+          res.writeHead(401, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({
+            success: false,
+            error: 'Session expired'
+          }));
+          return;
+        }
+
+        // Return profile data from session
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          success: true,
+          data: {
+            id: sessionData.user.id,
+            email: sessionData.user.email,
+            name: sessionData.user.user_metadata?.name || sessionData.user.email,
+            created_at: sessionData.user.created_at,
+            updated_at: sessionData.user.updated_at
+          }
+        }));
+      } catch (parseError) {
+        res.writeHead(401, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          success: false,
+          error: 'Invalid session'
+        }));
+      }
+    } catch (error) {
+      console.error('Profile get error:', error);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: 'Internal server error' }));
+    }
+    
+    return;
+  }
+
+  // Route /api/profile/me - update current user profile
+  if (req.url === '/api/profile/me' && req.method === 'PUT') {
+    console.log('Handling profile update request...');
+    
+    // Collect request body
+    let body = '';
+    req.on('data', chunk => {
+      body += chunk.toString();
+    });
+    
+    req.on('end', async () => {
+      try {
+        const requestData = JSON.parse(body);
+        
+        // Parse cookies for session-based authentication
+        const cookies = {};
+        const cookieHeader = req.headers.cookie;
+        if (cookieHeader) {
+          cookieHeader.split(';').forEach(cookie => {
+            const [name, value] = cookie.trim().split('=');
+            cookies[name] = value;
+          });
+        }
+
+        // Check for valid session cookie
+        if (!cookies.session) {
+          res.writeHead(401, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({
+            success: false,
+            error: 'Authentication required'
+          }));
+          return;
+        }
+
+        let sessionData;
+        try {
+          sessionData = JSON.parse(Buffer.from(cookies.session, 'base64').toString());
+          
+          // Check if session is still valid (not expired)
+          const maxAge = 7 * 24 * 60 * 60 * 1000; // 7 days in ms
+          if (Date.now() - sessionData.timestamp >= maxAge) {
+            res.writeHead(401, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({
+              success: false,
+              error: 'Session expired'
+            }));
+            return;
+          }
+        } catch (parseError) {
+          res.writeHead(401, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({
+            success: false,
+            error: 'Invalid session'
+          }));
+          return;
+        }
+
+        const { name, email } = requestData;
+        
+        // Basic validation
+        if (!name && !email) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({
+            success: false,
+            error: 'At least one field (name or email) is required'
+          }));
+          return;
+        }
+
+        // In a real implementation, we'd update the user in Supabase
+        // For now, using mock update logic with session data
+        console.log('Profile update successful');
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          success: true,
+          data: {
+            id: sessionData.user.id,
+            email: email || sessionData.user.email,
+            name: name || sessionData.user.user_metadata?.name || sessionData.user.email,
+            updated_at: new Date().toISOString()
+          },
+          message: 'Profile updated successfully'
+        }));
+        
+      } catch (err) {
+        console.error('Profile update processing error:', err);
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, error: 'Invalid request' }));
+      }
+    });
+    
+    return;
+  }
+
   // Route /api/auth/login
   if (req.url === '/api/auth/login' && req.method === 'POST') {
     console.log('Handling login request...');
@@ -159,7 +430,21 @@ const server = http.createServer(async (req, res) => {
           return;
         }
 
-        res.writeHead(200, { 'Content-Type': 'application/json' });
+        // Set session cookie (in real implementation, this would be a secure JWT)
+        const sessionToken = Buffer.from(JSON.stringify({
+          user: authData.user,
+          session: authData.session,
+          timestamp: Date.now()
+        })).toString('base64');
+
+        // Use Strict for production, Lax for development cross-origin
+        const isProduction = process.env.NODE_ENV === 'production'
+        const sameSitePolicy = isProduction ? 'Strict' : 'Lax'
+        const secureFlag = isProduction ? '; Secure' : ''
+        res.writeHead(200, { 
+          'Content-Type': 'application/json',
+          'Set-Cookie': `session=${sessionToken}; HttpOnly; Path=/; SameSite=${sameSitePolicy}${secureFlag}; Max-Age=${SESSION_MAX_AGE_MS / 1000}` // 7 days
+        });
         res.end(JSON.stringify({
           success: true,
           data: {
