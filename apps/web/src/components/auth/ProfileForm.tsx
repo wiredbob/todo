@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { profileUpdateSchema, type ProfileUpdateRequest, type AuthUser } from '@simple-todo/shared'
+import { profileUpdateSchema, type ProfileUpdateRequest } from '@simple-todo/shared'
 import { useAuth } from '../../hooks/useAuth'
 
 interface FormErrors {
@@ -28,7 +28,7 @@ export default function ProfileForm({ onSuccess }: ProfileFormProps) {
     if (user) {
       setFormData({
         email: user.email || '',
-        name: user.name || ''
+        name: (user.user_metadata?.name as string) || ''
       })
       setIsLoadingProfile(false)
     }
