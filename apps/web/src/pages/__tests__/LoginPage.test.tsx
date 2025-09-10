@@ -1,43 +1,57 @@
 import { render, screen } from '@testing-library/react'
 import { BrowserRouter } from 'react-router-dom'
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import LoginPage from '../LoginPage'
+import { AuthProvider } from '../../contexts/AuthContext'
 
-const renderWithRouter = (component: React.ReactElement) => {
-  return render(<BrowserRouter>{component}</BrowserRouter>)
+// Mock AuthProvider for tests
+const MockAuthProvider = ({ children }: { children: React.ReactNode }) => (
+  <AuthProvider>{children}</AuthProvider>
+)
+
+const renderWithProviders = (component: React.ReactElement) => {
+  return render(
+    <BrowserRouter>
+      <MockAuthProvider>
+        {component}
+      </MockAuthProvider>
+    </BrowserRouter>
+  )
 }
 
 describe('LoginPage', () => {
-  it('renders login form with placeholder content', () => {
-    renderWithRouter(<LoginPage />)
+  it('renders login form with authentication functionality', () => {
+    renderWithProviders(<LoginPage />)
     
     // Check main heading
     expect(screen.getByRole('heading', { name: /sign in to your account/i })).toBeInTheDocument()
     
-    // Check form fields are disabled and have placeholder text
-    expect(screen.getByLabelText(/email address/i)).toBeDisabled()
-    expect(screen.getByLabelText(/password/i)).toBeDisabled()
-    expect(screen.getAllByPlaceholderText(/coming in story 1.2 - authentication/i)).toHaveLength(2)
+    // Check form fields are enabled (real auth form)
+    expect(screen.getByLabelText(/email address/i)).not.toBeDisabled()
+    expect(screen.getByLabelText(/password/i)).not.toBeDisabled()
     
-    // Check submit button is disabled
-    expect(screen.getByRole('button', { name: /sign in \(coming soon\)/i })).toBeDisabled()
+    // Check form fields have proper placeholders
+    expect(screen.getByPlaceholderText(/enter your email address/i)).toBeInTheDocument()
+    expect(screen.getByPlaceholderText(/enter your password/i)).toBeInTheDocument()
     
-    // Check placeholder notice
-    expect(screen.getByText(/placeholder login/i)).toBeInTheDocument()
-    expect(screen.getByText(/story 1.2 - authentication/i)).toBeInTheDocument()
+    // Check submit button is enabled
+    expect(screen.getByRole('button', { name: /sign in/i })).not.toBeDisabled()
     
     // Check register link
     expect(screen.getByRole('link', { name: /create account/i })).toBeInTheDocument()
+    
+    // Check security notice
+    expect(screen.getByText(/secure login/i)).toBeInTheDocument()
   })
 
   it('has proper accessibility attributes', () => {
-    renderWithRouter(<LoginPage />)
+    renderWithProviders(<LoginPage />)
     
     // Form should have proper labels
     expect(screen.getByLabelText(/email address/i)).toHaveAttribute('type', 'email')
     expect(screen.getByLabelText(/password/i)).toHaveAttribute('type', 'password')
     
     // Button should have proper type
-    expect(screen.getByRole('button')).toHaveAttribute('type', 'submit')
+    expect(screen.getByRole('button', { name: /sign in/i })).toHaveAttribute('type', 'submit')
   })
 })
