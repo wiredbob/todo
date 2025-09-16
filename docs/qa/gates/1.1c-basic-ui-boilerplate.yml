@@ -1,0 +1,20 @@
+schema: 1
+story: '1.1c'
+gate: CONCERNS
+status_reason: 'Implementation complete with professional UI, but 2 test failures indicate incomplete placeholder behavior expectations.'
+reviewer: 'Quinn'
+updated: '2025-09-08T20:52:00Z'
+top_issues:
+  - id: 'TEST-001'
+    severity: medium
+    finding: 'LoginPage test expects disabled fields but implementation has interactive placeholder form'
+    suggested_action: 'Clarify placeholder behavior - either disable form fields or update test expectations'
+  - id: 'TEST-002'
+    severity: medium
+    finding: 'Accessibility test fails due to multiple button elements without unique identification'
+    suggested_action: 'Add unique aria-labels or data-testid attributes to distinguish form buttons'
+  - id: 'ARCH-001'
+    severity: low
+    finding: 'RegisterPage implemented beyond story scope (Story 1.1c focused on login/dashboard)'
+    suggested_action: 'Consider if RegisterPage should be removed or documented as early implementation'
+waiver: { active: false }
